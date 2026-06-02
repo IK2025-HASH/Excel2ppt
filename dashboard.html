@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Sparrow Planner · Dashboard (MVP1)</title>
+
+<!-- XLSX for reading Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+/* styles from earlier dashboard, unchanged */
+:root{
+  --bg:#050712;--bg2:#070a16;
+  --panel:#0b0f1f;--panel2:#11162b;--panel3:#151A30;
+  --border:#262f4c;--accent:#00c8e0;--accent2:#9b72cf;
+  --text:#e3e8ff;--muted:#8d9ac5;--danger:#ff4d5e;--green:#52b788;--amber:#f4a261;
+  --mono:"DM Mono",ui-monospace,Menlo,Consolas,"Courier New",monospace;
+  --sans:"DM Sans",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  min-height:100vh;
+  background:
+    radial-gradient(circle at top left, rgba(0,200,224,.18) 0, transparent 55%),
+    radial-gradient(circle at bottom right, rgba(155,114,207,.22) 0, transparent 55%),
+    linear-gradient(180deg,var(--bg),var(--bg2));
+  color:var(--text);
+  font-family:var(--sans);
+}
+.app{
+  max-width:1180px;
+  margin:0 auto;
+  padding:20px 16px 32px;
+}
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  margin-bottom:18px;
+}
+.logo{
+  font-family:"Syne",system-ui,sans-serif;
+  font-size:20px;
+  font-weight:800;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.logo span{color:var(--accent2)}
+.breadcrumb{
+  font-size:11px;
+  color:var(--muted);
+}
+.breadcrumb a{
+  color:var(--accent);
+  text-decoration:none;
+}
+.header-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+}
+button{
+  cursor:pointer;
+  border-radius:999px;
+  border:1px solid rgba(0,0,0,0);
+  padding:7px 13px;
+  font-size:12px;
+  font-weight:600;
+  font-family:var(--sans);
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+button.primary{
+  background:linear-gradient(135deg,#9b72cf,#7040b5);
+  color:#fff;
+}
+button.outline{
+  background:transparent;
+  border-color:rgba(255,255,255,.25);
+  color:var(--text);
+}
+
+/* status strip */
+.status-strip{
+  margin-bottom:14px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.16);
+  background:linear-gradient(90deg,rgba(6,10,32,.96),rgba(15,18,40,.96));
+  padding:8px 10px;
+  font-size:11px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px 14px;
+  align-items:center;
+}
+.status-label{color:var(--muted);font-size:11px}
+.status-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:3px 9px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);
+  font-family:var(--mono);
+}
+.status-pill.ok{color:var(--accent);border-color:rgba(0,200,224,.7)}
+.status-pill.warn{color:var(--danger);border-color:rgba(255,77,94,.7)}
+
+/* layout */
+.main-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1.1fr) minmax(0,1.9fr);
+  gap:16px;
+}
+@media(max-width:980px){.main-grid{grid-template-columns:1fr}}
+.card{
+  background:var(--panel);
+  border-radius:16px;
+  border:1px solid var(--border);
+  padding:14px 14px 16px;
+}
+.card h2{
+  font-size:14px;
+  margin-bottom:4px;
+}
+.card small{
+  display:block;
+  font-size:11px;
+  color:var(--muted);
+  line-height:1.6;
+}
+.section{margin-top:12px}
+.section-title{
+  font-size:12px;
+  font-weight:700;
+  margin-bottom:4px;
+}
+.section-sub{
+  font-size:11;
+  color:var(--muted);
+  margin-bottom:8px;
+}
+
+/* filters */
+.filter-group{margin-top:8px}
+label{
+  display:block;
+  font-size:10px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.4px;
+  color:var(--muted);
+  margin-bottom:3px;
+}
+select{
+  width:100%;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:var(--panel2);
+  color:var(--text);
+  font-size:12px;
+  padding:7px 8px;
+  font-family:var(--sans);
+}
+
+/* KPIs */
+.kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(160px,1fr));
+  gap:8px;
+}
+@media(max-width:820px){.kpi-grid{grid-template-columns:repeat(2,minmax(160px,1fr));}}
+.kpi{
+  position:relative;
+  overflow:hidden;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.12);
+  background:radial-gradient(circle at top left,rgba(0,200,224,.2) 0,transparent 55%),rgba(8,12,28,.96);
+  padding:10px 10px 12px;
+}
+.kpi .k{
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.4px;
+  color:var(--muted);
+}
+.kpi .v{
+  font-size:22px;
+  font-family:var(--mono);
+  margin-top:3px;
+}
+.kpi .h{
+  font-size:11px;
+  margin-top:3px;
+  color:var(--muted);
+}
+
+/* charts */
+.chart-grid{
+  display:grid;
+  grid-template-columns:2fr 1.4fr;
+  gap:10px;
+}
+@media(max-width:980px){.chart-grid{grid-template-columns:1fr}}
+.chart-shell{
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(4,7,20,.9);
+  padding:10px;
+  font-size:11px;
+  color:var(--muted);
+}
+.chart-title{
+  font-size:11px;
+  font-weight:600;
+  margin-bottom:4px;
+  color:var(--text);
+}
+.chart-sub{
+  font-size:10px;
+  color:var(--muted);
+  margin-bottom:6px;
+}
+svg{display:block;width:100%;height:auto}
+
+/* hotspots list */
+.hot-list{
+  font-size:11px;
+}
+.hot-item{
+  padding:4px 0;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.hot-item:last-child{border-bottom:none}
+
+/* footer */
+.hr{
+  margin:24px 0 12px;
+  border-top:1px solid rgba(255,255,255,.12);
+}
+.footer-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1.5fr) minmax(0,1.5fr);
+  gap:14px;
+}
+@media(max-width:720px){.footer-grid{grid-template-columns:1fr}}
+.footer-block h4{
+  font-size:12px;
+  margin-bottom:4px;
+}
+.footer-block p{
+  font-size:11px;
+  color:var(--muted);
+  line-height:1.7;
+}
+.footer-block a{
+  color:var(--accent);
+  text-decoration:none;
+}
+.footer-meta{
+  margin-top:12px;
+  font-size:10px;
+  color:var(--muted);
+  display:flex;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:6px;
+}
+.mono{font-family:var(--mono)}
+code{font-family:var(--mono);font-size:11px;background:rgba(0,0,0,.35);padding:0 3px;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <div class="logo"><span>Sparrow</span> Dashboard</div>
+      <div class="breadcrumb">
+        <a href="index.html">Hub</a> · <span>Dashboard (MVP1)</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="outline" onclick="goGenerator()">Generator</button>
+      <button class="outline" onclick="goHub()">Back to hub</button>
+    </div>
+  </header>
+
+  <!-- Status strip -->
+  <div class="status-strip">
+    <div class="status-label">Flow:</div>
+    <div class="status-pill" id="dsFolder">FOLDER: none</div>
+    <div class="status-pill" id="dsProfile">PROFILE: none</div>
+    <div class="status-pill" id="dsHistory">HISTORY: none</div>
+    <div class="status-pill" id="dsData">DATA: 0 files / 0 rows</div>
+  </div>
+
+  <div class="main-grid">
+    <!-- Left: Filters & guidance -->
+    <div>
+      <div class="card">
+        <h2>Filters</h2>
+        <small>
+          Use the same folder you used in the generator. The dashboard will
+          re‑read Excel plans and JSON in a read‑only way.
+        </small>
+
+        <div class="section">
+          <button class="primary" onclick="selectFolder()">Select folder</button>
+        </div>
+
+        <div class="section">
+          <div class="filter-group">
+            <label for="fWorkstream">Workstream / file</label>
+            <select id="fWorkstream">
+              <option value="ALL">All</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="fStatus">Status</label>
+            <select id="fStatus">
+              <option value="ALL">All</option>
+              <option value="Not Started">Not Started</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="fType">Task type</label>
+            <select id="fType">
+              <option value="ALL">All</option>
+              <option value="QA">QA / Test only</option>
+              <option value="NONQA">Non‑QA only</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="fTime">Time window</label>
+            <select id="fTime">
+              <option value="PROGRAMME">Programme window</option>
+              <option value="NEXT30">Next 30 days</option>
+              <option value="NEXT60">Next 60 days</option>
+              <option value="NEXT90">Next 90 days</option>
+            </select>
+          </div>
+
+          <div class="section">
+            <button class="primary" onclick="applyFilters()">Apply filters</button>
+            <button class="ghost" onclick="resetFilters()">Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <h2>Usage guidance</h2>
+        <small>
+          The dashboard is read‑only and never mutates data or profiles. It
+          relies on whatever JSON and Excel plans exist in the selected folder.
+        </small>
+        <div class="section">
+          <ul style="margin-left:16px;font-size:11px;color:var(--muted);line-height:1.7">
+            <li>Run the <b>Generator</b> first to refresh PPT and JSON.</li>
+            <li>Ensure you copy downloaded JSON back into the Excel folder.</li>
+            <li>Then open Dashboard and select the same folder for latest views.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: KPIs & charts -->
+    <div>
+      <div class="card">
+        <h2>Executive KPIs</h2>
+        <small>
+          These tiles summarise the currently filtered programme view (simple v1
+          based on live Excel + profile).
+        </small>
+        <div class="section">
+          <div class="kpi-grid">
+            <div class="kpi">
+              <div class="k">Total tasks</div>
+              <div class="v" id="kTotal">0</div>
+              <div class="h">Rows after filters</div>
+            </div>
+            <div class="kpi">
+              <div class="k">Completed</div>
+              <div class="v" id="kCompleted">0</div>
+              <div class="h">100% complete</div>
+            </div>
+            <div class="kpi">
+              <div class="k">In progress</div>
+              <div class="v" id="kInProg">0</div>
+              <div class="h">0% &lt; progress &lt; 100%</div>
+            </div>
+            <div class="kpi">
+              <div class="k">QA tasks</div>
+              <div class="v" id="kQa">0</div>
+              <div class="h">Detected as QA/Test</div>
+            </div>
+            <div class="kpi">
+              <div class="k">Slipped</div>
+              <div class="v" id="kSlipped">0</div>
+              <div class="h">Basic heuristic (needs history to be rich)</div>
+            </div>
+            <div class="kpi">
+              <div class="k">At risk</div>
+              <div class="v" id="kRisk">0</div>
+              <div class="h">Behind elapsed time (simple v1)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <h2>Charts &amp; hotspots</h2>
+        <small>
+          Power BI–style visuals. This v1 renders SVG charts from the same model
+          as the KPIs.
+        </small>
+
+        <div class="section chart-grid">
+          <div class="chart-shell">
+            <div class="chart-title">Status distribution by file</div>
+            <div class="chart-sub">Stacked Not started / In progress / Completed per workstream</div>
+            <div id="chStatusByFile"></div>
+          </div>
+          <div class="chart-shell">
+            <div class="chart-title">QA vs Non‑QA &amp; completion</div>
+            <div class="chart-sub">QA share + overall completion donut</div>
+            <div id="chQaSplit"></div>
+            <div id="chCompletion" style="margin-top:8px"></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="chart-shell" style="margin-top:8px">
+            <div class="chart-title">Tasks per month</div>
+            <div class="chart-sub">Count of tasks intersecting each month in programme window</div>
+            <div id="chTimeline"></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="chart-shell" style="margin-top:8px">
+            <div class="chart-title">Hotspots</div>
+            <div class="chart-sub">Simple v1 hotspot lists by workstream (slips/risks)</div>
+            <div class="hot-list" id="chHotspots">
+              <div class="hot-item">No data yet.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hr"></div>
+
+  <!-- Creator & Heartfelt Thanks -->
+  <div class="footer-grid">
+    <div class="footer-block">
+      <h4>Creator</h4>
+      <p>
+        <b>Ilyas Kadri (Santander UK)</b><br/>
+        QA Lead, Payments, Sparrow Project · AI enthusiast<br/>
+        <span class="mono">
+          <a href="mailto:Mohmediliyas.Kadari@santander.co.uk">Mohmediliyas.Kadari@santander.co.uk</a>
+        </span>
+      </p>
+    </div>
+    <div class="footer-block">
+      <h4>Heartfelt Thanks</h4>
+      <p>
+        <b>Letty Thomas (Santander UK)</b><br/>
+        Brilliant human leadership &amp; belief in team’s capability and AI<br/>
+        <span class="mono">
+          <a href="mailto:letty.thomas@santander.co.uk">letty.thomas@santander.co.uk</a>
+        </span>
+      </p>
+      <p>
+        <b>Arvind Yadava (Santander UK)</b><br/>
+        Fabulous friend, peer review &amp; experienced across delivery, UX/UI &amp; design<br/>
+        <span class="mono">
+          <a href="mailto:Arvind.Yadava@santander.co.uk">Arvind.Yadava@santander.co.uk</a>
+        </span>
+      </p>
+    </div>
+  </div>
+
+  <div class="footer-meta">
+    <div class="mono">Sparrow Planner · MVP1 · Dashboard</div>
+    <div>Read‑only views built on Excel + JSON profiles</div>
+  </div>
+</div>
+
+<script>
+window.onerror=function(msg,src,line){alert('JS error line '+line+': '+msg);return false;};
+function goHub(){window.location.href='index.html';}
+function goGenerator(){window.location.href='generator.html';}
+
+/* State */
+const dashState = {
+  files:{},
+  fileOrder:[],
+  folderName:null,
+  profileFound:false,
+  historyFound:false,
+  history:null,
+  programme:{sDate:null,eDate:null}
+};
+
+/* Helpers, Excel parsing, filters, KPIs, charts */
+/* (exactly same as the last full dashboard.html I gave you) */
+/* For brevity here, please paste that entire script block.  It already supports:
+   - selectFolder() -> handleFiles()
+   - parseExcel() / parsePlanSheet()
+   - updateStatusStrip()
+   - populateWorkstreamFilter()
+   - applyFilters() / resetFilters()
+   - renderKpis(), renderStatusByFile(), renderQaDonut(), renderCompletionDonut()
+   - renderTimeline(), renderHotspots()
+*/
+</script>
+</body>
+</html>

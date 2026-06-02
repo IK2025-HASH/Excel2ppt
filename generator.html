@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Sparrow Planner · Generator (MVP1+)</title>
+
+<!-- Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+
+<!-- Shared + page-specific CSS -->
+<link rel="stylesheet" href="css/sparrow-theme.css"/>
+<link rel="stylesheet" href="css/generator.css"/>
+</head>
+
+<body>
+<div class="app">
+  <header>
+    <div>
+      <div class="logo"><span>Sparrow</span> Planner</div>
+      <div class="breadcrumb"><a href="index.html">Hub</a> · <span>Generator</span></div>
+    </div>
+    <div class="header-actions">
+      <button class="outline" onclick="goDashboard()">Dashboard</button>
+      <button class="outline" onclick="goHub()">Back to hub</button>
+    </div>
+  </header>
+
+  <!-- Hidden pickers -->
+  <input type="file" id="folderInput" webkitdirectory directory multiple accept=".xlsx,.xls,.json" style="display:none"/>
+  <input type="file" id="fileInput" multiple accept=".xlsx,.xls,.json" style="display:none"/>
+  <input type="file" id="importProfileInput" accept=".json" style="display:none"/>
+
+  <!-- Flow status strip -->
+  <div class="status-strip">
+    <div class="status-pill" id="stFolder">FOLDER: none</div>
+    <div class="status-pill" id="stProfile">PROFILE: none</div>
+    <div class="status-pill ok" id="stAudience">AUDIENCE: n/a</div>
+    <div class="status-pill" id="stData">DATA: 0 files / 0 rows</div>
+  </div>
+
+  <div class="main-grid layout-1-2-3-4">
+
+    <!-- SECTION 1 -->
+    <div class="grid-cell cell-sec1">
+      <div class="card">
+        <h2>1. Select folder &amp; load plans</h2>
+        <small>
+          Select a folder that contains your workstream Excel files. Only <code>.xlsx</code> files will be processed (the browser may show a higher count if other files like <code>selection-profile.json</code> are present).
+	</small>
+
+        <div class="section">
+          <button class="primary" onclick="openFolderPicker()">Select folder</button>
+          <button class="ghost" onclick="openFilesPicker()">Select individual files</button>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Loaded files</div>
+          <div class="section-sub">Each file becomes a workstream in Section 2.</div>
+          <div id="fileGrid" class="file-grid"></div>
+        </div>
+
+        <div id="filesStatus" class="status-box" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <!-- SECTION 2 -->
+    <div class="grid-cell cell-sec2">
+      <div class="card">
+        <h2>2. Workstream selection</h2>
+        <small>Use the preview tiles to validate the HTML view before generating PPT (PPT should match).</small>
+
+        <!-- Audience filters -->
+        <div class="aud-card">
+          <div class="section-title">Audience filters (Task Level + Epic)</div>
+          <div class="section-sub">Multi-select dropdown with checkboxes (not radios).</div>
+
+          <div class="ms-grid">
+            <div class="ms-wrap">
+              <label>Task Level</label>
+              <button type="button" class="ms-btn" onclick="toggleMsMenu('taskLevels')">
+                <span id="msTaskLevelLabel">Selected: (all)</span>
+                <span class="ms-caret">▼</span>
+              </button>
+              <div class="ms-menu" id="msMenu_taskLevels">
+                <div class="actions">
+                  <button type="button" onclick="msSelectAll('taskLevels')">Select all</button>
+                  <button type="button" onclick="msSelectNone('taskLevels')">Select none</button>
+                </div>
+                <div class="ms-list" id="msList_taskLevels"></div>
+              </div>
+            </div>
+
+            <div class="ms-wrap">
+              <label>Epic</label>
+              <button type="button" class="ms-btn" onclick="toggleMsMenu('epics')">
+                <span id="msEpicLabel">Selected: (all)</span>
+                <span class="ms-caret">▼</span>
+              </button>
+              <div class="ms-menu" id="msMenu_epics">
+                <div class="actions">
+                  <button type="button" onclick="msSelectAll('epics')">Select all</button>
+                  <button type="button" onclick="msSelectNone('epics')">Select none</button>
+                </div>
+                <div class="ms-list" id="msList_epics"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="preset-row">
+            <button class="outline" onclick="presetExec()">Preset: Exec (Level 1)</button>
+            <button class="outline" onclick="presetDelivery()">Preset: Delivery (Level 2)</button>
+            <button class="outline" onclick="presetCert()">Preset: Certification</button>
+            <button class="ghost" onclick="presetAll()">Preset: All</button>
+          </div>
+        </div>
+
+        <div class="ws-layout">
+          <div class="ws-sidebar">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Workstreams</div>
+            <div id="wsTileList"></div>
+          </div>
+
+          <div>
+            <div class="section">
+              <div class="section-title">Active workstream</div>
+              <div class="section-sub">Rows shown are already filtered by Task Level + Epic.</div>
+
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+                <button class="ghost" onclick="selectAllRowsActive(true)">Select all (visible)</button>
+                <button class="ghost" onclick="selectAllRowsActive(false)">Deselect all (visible)</button>
+              </div>
+
+              <div id="rowTableContainer">
+                <div style="font-size:11px;color:var(--muted);padding:4px 2px">No workstream selected yet.</div>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">RAID (read‑only)</div>
+              <div class="section-sub">If a RAID sheet is present, it is shown here for context.</div>
+              <div id="raidTableContainer">
+                <div style="font-size:11px;color:var(--muted);padding:4px 2px">No workstream selected yet.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HTML preview tiles -->
+        <div class="section">
+          <div class="section-title">Workstream HTML previews</div>
+          <div class="section-sub">
+            Click a tile to open the HTML preview in a new tab. Bars always show labels (no truncation).
+          </div>
+          <div id="htmlTileGrid" class="html-tile-grid">
+            <div style="font-size:11px;color:var(--muted);padding:4px 2px">No selected workstreams yet.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3 -->
+    <div class="grid-cell cell-sec3">
+      <div class="card">
+        <h2>3. Programme &amp; bands</h2>
+        <small>Programme window is used for previews and PPT exports. Bands and milestones overlay HTML + PPT.</small>
+
+        <div class="section">
+          <label>Programme name</label>
+          <input type="text" id="progName" value="Project Sparrow – Payments"/>
+        </div>
+
+        <div class="section" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+          <div>
+            <label>Start month</label>
+            <select id="startMonth"></select>
+          </div>
+          <div>
+            <label>Start year</label>
+            <input type="number" id="startYear" value="2026" min="2020" max="2035"/>
+          </div>
+          <div>
+            <label>End month</label>
+            <select id="endMonth"></select>
+          </div>
+          <div>
+            <label>End year</label>
+            <input type="number" id="endYear" value="2027" min="2020" max="2035"/>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Milestones</div>
+          <div class="section-sub">Top strip bars visible across outputs.</div>
+          <div id="milestoneList"></div>
+          <button class="ghost" onclick="addMilestone()">+ Add milestone</button>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Vertical bands</div>
+          <div class="section-sub">E.g., Change Freeze, Transition, etc.</div>
+
+          <table class="bands-tbl">
+            <thead>
+              <tr>
+                <th>Label</th><th>Start M</th><th>Start Y</th><th>End M</th><th>End Y</th><th>Colour</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="bandsBody"></tbody>
+          </table>
+
+          <button class="ghost" onclick="addBand()">+ Add band</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 4 -->
+    <div class="grid-cell cell-sec4">
+      <div class="card">
+        <h2>4. Generate PPT</h2>
+        <small>
+          Generates 3 decks: Detail Plan, QA PoaP, and Exec Dashboard.
+          PPT is built from <b>editable shapes (not images)</b> and includes bar labels.
+        </small>
+
+        <div class="section">
+          <button class="primary" style="margin-bottom:6px" onclick="generateDetailPPT()">Detail Plan PPT</button>
+          <button class="outline" style="margin-bottom:6px" onclick="generateQaPPT()">QA PoaP PPT</button>
+          <button class="outline" onclick="generateExecPPT()">Exec Dashboard PPT</button>
+        </div>
+
+        <div class="prog-wrap" id="progWrap">
+          <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+          <div class="prog-label" id="progLabel">Preparing…</div>
+        </div>
+        <div class="status-box" id="genStatus"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SECTION 5: Retention profile (below main grid) -->
+  <div style="padding:0 18px;margin-top:12px">
+    <div class="card">
+      <h2>5. Retention profile</h2>
+      <small>
+        Download/import <code>selection-profile.json</code>. Copy it into the Excel folder to retain selections + Level/Epic filters.
+      </small>
+      <div class="section">
+        <button class="outline" onclick="downloadSelectionProfile()">Download selection-profile.json</button>
+        <button class="ghost" onclick="importSelectionProfileClick()">Import selection-profile.json</button>
+        <div id="profileStatus" class="status-box" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hr"></div>
+
+  <div class="footer-grid">
+    <div class="footer-block">
+      <h4>Creator</h4>
+      <p>
+        <b>Ilyas Kadri (Santander UK)</b><br/>
+        QA Lead, Payments, Sparrow Project · AI enthusiast<br/>
+        <span class="mono"><a href="mailto:Mohmediliyas.Kadari@santander.co.uk">Mohmediliyas.Kadari@santander.co.uk</a></span>
+      </p>
+    </div>
+    <div class="footer-block">
+      <h4>Heartfelt Thanks</h4>
+      <p>
+        <b>Letty Thomas (Santander UK)</b><br/>
+        <span class="mono"><a href="mailto:letty.thomas@santander.co.uk">letty.thomas@santander.co.uk</a></span>
+      </p>
+      <p style="margin-top:8px">
+        <b>Arvind Yadava (Santander UK)</b><br/>
+        <span class="mono"><a href="mailto:Arvind.Yadava@santander.co.uk">Arvind.Yadava@santander.co.uk</a></span>
+      </p>
+    </div>
+  </div>
+
+  <div class="footer-meta">
+    <div class="mono">Sparrow Planner · Generator</div>
+    <div>QA PoaP timeline + pagination · TaskID labels · No HTML truncation</div>
+  </div>
+</div>
+
+<!-- JS modules — load in dependency order -->
+<script src="js/sparrow-utils.js"></script>
+<script src="js/excel-parser.js"></script>
+<script src="js/generator-core.js"></script>
+<script src="js/svg-preview.js"></script>
+<script src="js/ppt-engine.js"></script>
+</body>
+</html>
