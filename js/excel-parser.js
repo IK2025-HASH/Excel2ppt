@@ -70,13 +70,6 @@ function parsePlanSheet(ws, fname) {
     if (!v) return null;
     if (v instanceof Date) return isNaN(v.getTime()) ? null : v;
     if (typeof v === 'number' && v > 30000) return new Date((v - 25569) * 86400 * 1000);
-    if (typeof v === 'string') {
-      const dmy = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-      if (dmy) {
-        const d = new Date(+dmy[3], +dmy[2] - 1, +dmy[1]);
-        return isNaN(d.getTime()) ? null : d;
-      }
-    }
     const d = new Date(v);
     return isNaN(d.getTime()) ? null : d;
   };
