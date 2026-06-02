@@ -92,8 +92,12 @@ function pptDrawVerticalBands(slide,ctx,y,h,isFirst){
     const bc=pptHex(b.color);
     slide.addShape(ST.rect,{x:bx,y:y,w:bw,h:h,fill:{color:bc,transparency:88},line:{color:bc,transparency:65,width:1}});
     if(isFirst){
-      const lh=Math.min(0.14,h);
-      slide.addText(b.label||'',{x:bx,y:y,w:bw,h:lh,fontFace:'Calibri',fontSize:6,bold:true,color:bc,align:'center',valign:'top',transparency:15});
+      /* rotated label at left edge of band, reading bottom-to-top */
+      const lw=0.14;
+      const lh=Math.min(bw,h);
+      const lx=bx;
+      const ly=y+(h-lh)/2;
+      slide.addText(b.label||'',{x:lx,y:ly,w:lh,h:lw,fontFace:'Calibri',fontSize:6,bold:true,color:bc,align:'center',valign:'mid',rotate:270});
     }
   });
 }

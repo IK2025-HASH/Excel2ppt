@@ -118,10 +118,11 @@ function buildWorkstreamPptLikeSVG(rows, fc) {
       const ex = Math.min(d2x(b.end), GX + GW);
       const bw = ex - bx; if (bw <= 0) return;
       bSvg += `<rect x="${bx}" y="${curY}" width="${bw}" height="${gH - 1}" fill="#${b.color}" opacity="0.12"/>`;
-      /* band label — rendered once on first epic group only */
+      /* band label — vertical, once on first epic group, reading bottom-to-top at left edge of band */
       if (alt === 0) {
-        const labelY = curY + Math.min(10, Math.floor(ROW_H * 0.45));
-        bSvg += `<text x="${bx + bw / 2}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Calibri" font-size="7" font-weight="bold" fill="#${b.color}" opacity="0.85">${safeHtml(b.label)}</text>`;
+        const cx = bx + 7;
+        const cy = curY + (gH - 1) / 2;
+        bSvg += `<text transform="rotate(-90,${cx},${cy})" x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-family="Calibri" font-size="7" font-weight="bold" fill="#${b.color}" opacity="0.90">${safeHtml(b.label)}</text>`;
       }
     });
 
