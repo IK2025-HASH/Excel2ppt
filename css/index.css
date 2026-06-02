@@ -522,6 +522,33 @@ header {
 }
 .btn-sample:hover { opacity: .85; transform: translateY(-1px); }
 .btn-sample--green { background: #4caf50; color: #fff; }
+
+.sample-ws-links {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.sample-ws-label {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 600;
+  width: 100%;
+}
+.sample-ws-links a {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  background: rgba(0,200,224,.10);
+  border: 1px solid rgba(0,200,224,.30);
+  border-radius: 20px;
+  padding: 3px 10px;
+  text-decoration: none;
+  transition: background .15s;
+}
+.sample-ws-links a:hover { background: rgba(0,200,224,.22); }
+
 .samples-hint {
   font-size: 11.5px;
   color: var(--muted);
