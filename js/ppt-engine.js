@@ -82,7 +82,7 @@ function pptDrawHeader(slide,title,ctx){
 }
 
 /* ========= Vertical bands overlay ========= */
-function pptDrawVerticalBands(slide,ctx,y,h){
+function pptDrawVerticalBands(slide,ctx,y,h,isFirst){
   const ST=ctx.ST;
   ctx.bands.forEach(b=>{
     const bx=Math.max(ctx.d2x(b.start),ctx.GX);
@@ -91,6 +91,10 @@ function pptDrawVerticalBands(slide,ctx,y,h){
     if(bw<=0.05)return;
     const bc=pptHex(b.color);
     slide.addShape(ST.rect,{x:bx,y:y,w:bw,h:h,fill:{color:bc,transparency:88},line:{color:bc,transparency:65,width:1}});
+    if(isFirst){
+      const lh=Math.min(0.14,h);
+      slide.addText(b.label||'',{x:bx,y:y,w:bw,h:lh,fontFace:'Calibri',fontSize:6,bold:true,color:bc,align:'center',valign:'top',transparency:15});
+    }
   });
 }
 
@@ -179,14 +183,14 @@ function pptDrawTimelineFromEpicGroups(pptx,title,fc,ctx,epicGroups){
   const leftW=ctx.LW;
   const cEpic=pptHex(fc.col1Color);
 
-  epicGroups.forEach(g=>{
+  epicGroups.forEach((g,gi)=>{
     const gH=g.rows.length*rowH;
 
     slide.addShape(ST.rect,{x:0,y:y,w:leftW,h:gH,fill:{color:cEpic},line:{color:cEpic}});
     slide.addText(g.epic,{x:0.06,y:y,w:leftW-0.12,h:gH,fontFace:'Calibri',fontSize:8,bold:true,color:contrast(cEpic),align:'center',valign:'mid',wrap:true});
 
     slide.addShape(ST.rect,{x:ctx.GX,y:y,w:ctx.GW,h:gH,fill:{color:'F7F7F7'},line:{color:'FFFFFF',transparency:100}});
-    pptDrawVerticalBands(slide,ctx,y,gH);
+    pptDrawVerticalBands(slide,ctx,y,gH,gi===0);
     pptDrawMonthGridLines(slide,ctx,y,gH);
 
     for(const r of g.rows){

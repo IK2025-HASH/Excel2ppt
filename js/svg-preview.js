@@ -118,6 +118,11 @@ function buildWorkstreamPptLikeSVG(rows, fc) {
       const ex = Math.min(d2x(b.end), GX + GW);
       const bw = ex - bx; if (bw <= 0) return;
       bSvg += `<rect x="${bx}" y="${curY}" width="${bw}" height="${gH - 1}" fill="#${b.color}" opacity="0.12"/>`;
+      /* band label — rendered once on first epic group only */
+      if (alt === 0) {
+        const labelY = curY + Math.min(10, Math.floor(ROW_H * 0.45));
+        bSvg += `<text x="${bx + bw / 2}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-family="Calibri" font-size="7" font-weight="bold" fill="#${b.color}" opacity="0.85">${safeHtml(b.label)}</text>`;
+      }
     });
 
     /* ✅ NEW: Month grid lines (vertical, matching PPT) */
